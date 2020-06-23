@@ -42,47 +42,49 @@ def send_alert(data):
     timestamp = int(round(time.time() * 1000))
     url = 'https://oapi.dingtalk.com/robot/send?access_token=%s&timestamp=%d&sign=%s' % (token, timestamp, make_sign(timestamp, secret))
 
-    status = data['status']
-    alerts = data['alerts']
-    alert_name = alerts[0]['labels']['alertname']
+    try:
+        for alert in data["alerts"]:
+            if "description" in alert["annotations"]:
+                msg = "description"
+            elif "message" in alert["annotations"]:
+                msg = "message"
+            else:
+                msg = "summary"
 
-    def _mark_item(alert):
-        labels = alert['labels']
-        annotations = "> "
-        for k, v in alert['annotations'].items():
-            annotations += "{0}: {1}\n".format(k, v)
-        if 'job' in labels:
-            mark_item = "\n> job: " + labels['job'] + '\n\n' + annotations + '\n'
-        else:
-            mark_item = annotations + '\n'
-        return mark_item
+            title = "[k8s][{cluster}] {status}".format(
+                            cluster=alert["labels"]["cluster"],
+                            status=alert["status"].upper()
+                        )
+            text = "[k8s][{cluster}] {status} \
+                        \n >Severity: {severity} \
+                        \n Name: {alertname} \
+                        \n Details: {annotations} \
+                        \n StartsAt: {startsAt} \
+                        \n [查看详细信息]({external_url})".format(
+                            cluster=alert["labels"]["cluster"],
+                            status=alert["status"].upper(),
+                            severity=alert["labels"]["severity"].upper(),
+                            alertname=alert["labels"]['alertname'],
+                            annotations=alert["annotations"][msg],
+                            startsAt=alert["startsAt"].split('.')[0].replace('T', ' '),
+                            external_url=alert["generatorURL"]
+                        )
 
-    if status == 'resolved':  # 告警恢复
-        send_data = {
-            "msgtype": "text",
-            "text": {
-                "content": "报警 %s 已恢复" % alert_name
+            playload = {
+                "msgtype": "markdown",
+                "markdown": {
+                    "title": title,
+                    "text": text 
+                },
             }
-        }
-    else:
-        title = '%s 有 %d 条新的报警' % (alert_name, len(alerts))
-        external_url = alerts[0]['generatorURL']
-        prometheus_url = os.getenv('PROME_URL')
-        if prometheus_url:
-            res = urlparse(external_url)
-            external_url = external_url.replace(res.netloc, prometheus_url)
-        send_data = {
-            "msgtype": "markdown",
-            "markdown": {
-                "title": title,
-                "text": title + "\n" + "![](https://bxdc-static.oss-cn-beijing.aliyuncs.com/images/prometheus-recording-rules.png)\n" + _mark_item(alerts[0]) + "\n" + "[点击查看完整信息](" + external_url + ")\n"
-            }
-        }
 
-    req = requests.post(url, json=send_data)
-    result = req.json()
-    if result['errcode'] != 0:
-        app.logger.error('notify dingtalk error: %s' % result['errcode'])
+            req = requests.post(url, json=playload)
+            result = req.json()
+            if result['errcode'] != 0:
+                app.logger.error('notify dingtalk error: %s' % result['errcode'])
+    except:
+        logging.error("send failed")
+        logging.error(traceback.format_exc())
 
 
 def make_sign(timestamp, secret):
