@@ -77,7 +77,6 @@ def send_alert(data):
                     "text": text 
                 },
             }
-
             req = requests.post(url, json=playload)
             result = req.json()
             if result['errcode'] != 0:

@@ -5,7 +5,16 @@ AlertManager 钉钉报警简单服务示例
 
 
 
-![alertmanager dingtalk message demo](https://bxdc-static.oss-cn-beijing.aliyuncs.com/images/dingtalk-hook-demo.png)
+
+```
+[k8s][53zaixian-prod] RESOLVED                         
+>Severity: WARNING                         
+Name: KubeHpaMaxedOut                         
+Details: HPA java-yunwei-demo has been running at max replicas for longer than 15 minutes.                         
+StartsAt: 2020-06-22 23:33:58                         
+[查看详细信息](http://prometheus.example.com)
+```
+
 
 ## 运行
 ### 使用`Docker`运行
