@@ -1,4 +1,4 @@
-FROM wcr.wecash.net/base/python:3.6.3
+FROM python:3.6.3
 
 WORKDIR /src
 
